@@ -1,0 +1,70 @@
+#!/bin/zsh
+
+# Michael R Bell:
+# ---------------------------------------------------------
+#  Pratice with bash Shell Scripting
+#  Purpose of this script is to easily run android emulator
+#  and it's dependencies for Charles Proxy.
+#
+#  1: Pulls list of avd devices
+#  2: Determies if the user has > 1 device
+#  3: Prompts user for input to open device
+#  4: Pulls computer local IP and appends Port number
+#  5: Executes command with selected device and http-proxy
+
+
+
+# Michael R Bell:
+# ---------------------------------------------------------
+# Gets user input for multiple emulator list
+# Sets global variable for runtime.
+function userSelect() 
+{
+    var=0;
+	echo 'Which emulator would you like to run?\n'
+	for i in "${avv[@]}"
+	do
+		var=$((var+1))
+		echo "Enter $var for: ~~$i~~"
+	done
+	read -t 30 input
+	if ! [[ $input =~ ^[0-9]+$ ]] ; then
+		echo "Input should be an inter. EX: 1-9999999" >&2; exit 1
+	else
+		echo "Setting Virtual host to ${avv[$input]}\n"
+		echo $avv[$input] | read androidDevice
+	fi
+	runEmulator
+}
+
+
+# Michael R Bell:
+# ---------------------------------------------------------
+# Sets standard variables from system, and
+# runs emulator
+function runEmulator() 
+{
+
+	ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1' | awk '{print $1":8888"}' | read ipAddress
+	echo "IP address and port set to: $ipAddress\n"
+	open -a Charles
+	echo "Opened Charles \n"
+	echo "Running Android Emulator\n"
+	emulator -avd $androidDevice -http-proxy $ipAddress
+	exit 0
+}
+
+
+avv=($(android list avd | grep "Name" | sed 's/Name://g' | tr -d ' ')) 
+android list avd | grep "Name" | sed 's/Name://g' | tr -d ' ' | wc -w | read int
+#Checks the array for = 0
+if [[ int < 1 ]]; then
+	echo "No emulators were located"
+	exit 1;
+fi
+if [[ int < 2 ]]; then
+	$avv[1] | read androidDevice
+	runEmulator
+else
+	userSelect
+fi
